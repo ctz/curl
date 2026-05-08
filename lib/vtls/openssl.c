@@ -56,6 +56,10 @@
 #include "curlx/base64.h"
 #endif
 
+#ifdef HAVE_UPKI
+#include "upki-openssl.h"
+#endif
+
 #include <openssl/rand.h>
 #include <openssl/x509v3.h>
 #ifndef OPENSSL_NO_DSA
@@ -3908,11 +3912,17 @@ CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
   }
 #endif /* HAVE_OPENSSL_SRP && USE_TLS_SRP */
 
+#if defined(HAVE_UPKI)
+  const SSL_verify_cb verify_callback = upki_openssl_verify_callback;
+#else
+  const SSL_verify_cb verify_callback = NULL;
+#endif
+
   /* OpenSSL always tries to verify the peer. By setting the failure mode
    * to NONE, we allow the connect to complete, regardless of the outcome.
    * We then explicitly check the result and may try alternatives like
    * Apple's SecTrust for verification. */
-  SSL_CTX_set_verify(octx->ssl_ctx, SSL_VERIFY_NONE, NULL);
+  SSL_CTX_set_verify(octx->ssl_ctx, SSL_VERIFY_NONE, verify_callback);
 
   /* Enable logging of secrets to the file specified in env SSLKEYLOGFILE. */
 #if !defined(HAVE_KEYLOG_UPSTREAM) && defined(HAVE_KEYLOG_CALLBACK)
